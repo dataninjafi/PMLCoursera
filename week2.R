@@ -49,7 +49,7 @@ x <- training  %>% select(grep("^IL",names(training)))
 x<- preProcess(x, method = "pca", thresh = 0.9)
 
 #q5
-
+library(dplyr)
 library(caret)
 library(AppliedPredictiveModeling)
 set.seed(3433)
@@ -60,6 +60,15 @@ training = adData[ inTrain,]
 testing = adData[-inTrain,]
 
 training <- training  %>% select(diagnosis,grep("^IL",names(training)))
+modelFit <- train(training$diagnosis ~., method="glm", training)
+prediction1 <- predict(modelFit, testing)
+confm1 <- confusionMatrix(prediction1, testing$diagnosis)
 
-x<- preProcess(training, method = "pca", thresh = 0.8)
+modelFit2 <- train(training$diagnosis ~ ., method = "glm", preProcess = "pca", data = training  %>% select(IL_11:IL_8), trControl = trainControl(preProcOptions = list(thresh = 0.8)))
+prediction2 <- predict(modelFit2, testing )
+#modelFit2 <- train(training$diagnosis ~ ., method="glm", data=prediction2)
 
+confm2 <- confusionMatrix(testing$diagnosis, prediction2)
+
+print(confm1)
+print(confm2)
