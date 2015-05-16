@@ -1,0 +1,121 @@
+---
+title: "Practical Machine Learning - Writeup"
+author: "Risto Kaartinen"
+date: "16 May 2015"
+output: html_document
+---
+# 1. Assignment
+
+> The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+# 2. Getting and cleaning data
+
+Data will be downloaded if not yet done so. 
+
+Columns with NA values will be removed. Also the first seven columns containing
+metadata will be removed. Remaining columns are response variable "classe" and
+indepent variables containing accelerometer data on belt, forearm, 
+arm, and dumbell.
+
+As one can notice no near zero variables identified within the variables.
+
+```{r message=FALSE }
+# Downloading data
+library(caret)
+library(dplyr)
+library(plyr)
+if(!file.exists("pml-training.csv")) {
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",
+              destfile = "pml-training.csv",
+              method = "curl")
+}
+
+if(!file.exists("pml-testing.csv")) {
+download.file(url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
+              destfile = "pml-testing.csv",
+              method = "curl")
+}
+
+data <- read.csv(file = "pml-training.csv", na.strings=c("#DIV/0!","NA"))
+
+# Cleaning data
+
+colsNoNA <- data %>% 
+    sapply(function (x) !any(is.na(x))) %>% 
+    t %>% 
+    as.vector
+    
+
+data <- data[, colsNoNA] 
+data <- data %>% 
+    select(matches("arm|belt|dumbbell|classe"))
+
+nearZeroVar(data, saveMetrics = T)
+```
+
+# 3. Subsetting data
+
+Training and validation data sets are created here.
+
+```{r}
+
+inTrain <- createDataPartition(y=data$classe,
+                              p=0.7, list=FALSE)
+training <- data[inTrain,]
+validate <- data[-inTrain,]
+```
+
+
+# 4. Model selection
+
+Three models are created: 
+
+ * One using Random Forest, 
+ * another using Decision tree,
+ * and a third, which is combination of the previous two models. 
+ 
+Models are cross validated 3 times using k-fold sampling.
+
+```{r message=FALSE, results=FALSE, warning=FALSE}
+set.seed(472)
+rules <- trainControl(method="cv", number=3, allowParallel=TRUE)
+set.seed(472)
+fit2 <- train(classe ~ ., data=training, method="rf", trControl = rules, verbose=FALSE)
+set.seed(472)
+fit3 <- train(classe ~ ., data=training, method="rpart", trControl = rules)
+
+set.seed(472)
+pre2 <- predict(fit2, newdata = validate)
+set.seed(472)
+pre3 <- predict(fit3, newdata = validate)
+
+comb <- data.frame(pre2, pre3,  classe=validate$classe)
+set.seed(472)
+fitComb <- train(classe ~ ., data=comb, method="rf", trControl = rules, verbose=FALSE)
+set.seed(472)
+preComb <- predict(fitComb, validate$classe)
+```
+
+Random Forest and combined model have both 0.9929 accuracy as the model based on
+the Decision tree method has much lower accuracy. Therefore, I choose to continue
+with the Random Forest method. Below you find the confusionMatrix of that 
+particular model.
+
+```{r}
+confusionMatrix(pre2, validate$classe)
+```
+
+# 5. Expected out of sample error
+
+```{r}
+error <- paste(round((1-confusionMatrix(pre2, validate$classe)$overall["Accuracy"])*100,2), "%")
+```
+
+Estimation for out of sample error is outstanding `r error`. 
+
+# 6. Conclusions
+
+Model produced with the Random Forest method is very accurate. It has only `r error` 
+out of sample error. Model predicted test set perfectly and produced 20/20 points. 
+
+
