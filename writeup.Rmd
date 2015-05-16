@@ -1,7 +1,7 @@
 ---
 title: "Practical Machine Learning - Writeup"
 author: "Risto Kaartinen"
-date: "3 May 2015"
+date: "16 May 2015"
 output: html_document
 ---
 # 1. Assignment
@@ -79,14 +79,20 @@ Models are cross validated 3 times using k-fold sampling.
 ```{r message=FALSE, results=FALSE, warning=FALSE}
 set.seed(472)
 rules <- trainControl(method="cv", number=3, allowParallel=TRUE)
+set.seed(472)
 fit2 <- train(classe ~ ., data=training, method="rf", trControl = rules, verbose=FALSE)
+set.seed(472)
 fit3 <- train(classe ~ ., data=training, method="rpart", trControl = rules)
 
+set.seed(472)
 pre2 <- predict(fit2, newdata = validate)
+set.seed(472)
 pre3 <- predict(fit3, newdata = validate)
 
 comb <- data.frame(pre2, pre3,  classe=validate$classe)
+set.seed(472)
 fitComb <- train(classe ~ ., data=comb, method="rf", trControl = rules, verbose=FALSE)
+set.seed(472)
 preComb <- predict(fitComb, validate$classe)
 ```
 
